@@ -41,7 +41,7 @@ class BrennanSSHGUI:
         self.reboot_btn.pack(side=tk.LEFT, padx=5)
 
         self.update_btn = tk.Button(action_frame, text="Update", state=tk.DISABLED, 
-                                    command=lambda: self.send_quick_command("apt-get update && apt-get upgrade -y"))
+                                    command=lambda: self.send_quick_command("apt-get update"))
         self.update_btn.pack(side=tk.LEFT, padx=5)
         
         self.storage_btn = tk.Button(action_frame, text="Check Storage", state=tk.DISABLED, 
@@ -100,7 +100,7 @@ class BrennanSSHGUI:
     def trigger_reboot(self):
         if self.shell:
             self.is_rebooting = True
-            self.send_quick_command("sync && wait && kill 1")
+            self.send_quick_command("sync && sleep 5s && kill 1")
 
     def ssh_thread(self, ip, polling_mode=False):
         self.client = paramiko.SSHClient()
