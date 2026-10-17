@@ -4,12 +4,13 @@ import paramiko
 import threading
 import os
 import time
+import urllib.request
 
 class BrennanSSHGUI:
     def __init__(self, root):
         self.root = root
         self.root.title("Brennan SSH Auto-Login")
-        self.root.geometry("1300x1000")
+        self.root.geometry("1250x900")
         
         self.client = None
         self.shell = None
@@ -39,7 +40,7 @@ class BrennanSSHGUI:
                                     command=self.trigger_reboot)
         self.reboot_btn.pack(side=tk.LEFT, padx=5)
 
-        self.update_btn = tk.Button(action_frame, text="System Update", state=tk.DISABLED, 
+        self.update_btn = tk.Button(action_frame, text="Update", state=tk.DISABLED, 
                                     command=lambda: self.send_quick_command("apt-get update && apt-get upgrade -y"))
         self.update_btn.pack(side=tk.LEFT, padx=5)
         
@@ -47,12 +48,16 @@ class BrennanSSHGUI:
                                     command=lambda: self.send_quick_command("df -h && fdisk -l"))
         self.storage_btn.pack(side=tk.LEFT, padx=5)
         
-        self.dl_settings_btn = tk.Button(action_frame, text="Download Settings", state=tk.DISABLED, 
-                                         command=lambda: self.download_file("/media/hdd1/b2settings", "b2settings.txt"))
+        self.dac_btn = tk.Button(action_frame, text="DAC Version", state=tk.DISABLED, 
+                                    command=lambda: self.send_quick_command("aplay -l"))
+        self.dac_btn.pack(side=tk.LEFT, padx=5)
+        
+        self.dl_settings_btn = tk.Button(action_frame, text="Settings", state=tk.DISABLED, 
+                                    command=lambda: self.download_file("/media/hdd1/b2settings", "b2settings.txt"))
         self.dl_settings_btn.pack(side=tk.LEFT, padx=5)
 
-        self.dl_b2db_btn = tk.Button(action_frame, text="Download b2db", state=tk.DISABLED, 
-                                     command=lambda: self.download_file("/media/hdd1/b2db", "b2db_backup.txt"))
+        self.dl_b2db_btn = tk.Button(action_frame, text="b2db", state=tk.DISABLED, 
+                                     command=lambda: self.download_file("/media/hdd1/b2db", "b2db.txt"))
         self.dl_b2db_btn.pack(side=tk.LEFT, padx=5)
 
         self.export_btn = tk.Button(action_frame, text="Export Output", command=self.export_output)
@@ -95,7 +100,7 @@ class BrennanSSHGUI:
     def trigger_reboot(self):
         if self.shell:
             self.is_rebooting = True
-            self.send_quick_command("reboot -d30")
+            self.send_quick_command("sync && wait && kill 1")
 
     def ssh_thread(self, ip, polling_mode=False):
         self.client = paramiko.SSHClient()
@@ -161,6 +166,7 @@ class BrennanSSHGUI:
         self.reboot_btn.config(state=tk.NORMAL)
         self.update_btn.config(state=tk.NORMAL)
         self.storage_btn.config(state=tk.NORMAL)
+        self.dac_btn.config(state=tk.NORMAL)
         self.dl_settings_btn.config(state=tk.NORMAL) 
         self.dl_b2db_btn.config(state=tk.NORMAL) 
 
@@ -170,6 +176,7 @@ class BrennanSSHGUI:
         self.reboot_btn.config(state=tk.DISABLED)
         self.update_btn.config(state=tk.DISABLED)
         self.storage_btn.config(state=tk.DISABLED)
+        self.dac_btn.config(state=tk.DISABLED)
         self.dl_settings_btn.config(state=tk.DISABLED) 
         self.dl_b2db_btn.config(state=tk.DISABLED) 
 
