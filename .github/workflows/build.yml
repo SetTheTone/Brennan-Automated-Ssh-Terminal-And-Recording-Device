@@ -15,7 +15,7 @@ jobs:
     steps:
     # Step 1: Pull your code onto the cloud runner
     - name: Checkout code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
 
     # Step 2: Set up Python
     - name: Set up Python
@@ -35,7 +35,7 @@ jobs:
 
     # Step 5: Upload the finished binaries so you can download them
     - name: Upload compiled binary
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v5
       with:
         name: BrennanSSH-${{ matrix.os }}
         path: |
