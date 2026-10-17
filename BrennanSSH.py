@@ -59,6 +59,10 @@ class BrennanSSHGUI:
         self.dl_b2db_btn = tk.Button(action_frame, text="b2db", state=tk.DISABLED, 
                                      command=lambda: self.download_file("/media/hdd1/b2db", "b2db.txt"))
         self.dl_b2db_btn.pack(side=tk.LEFT, padx=5)
+        
+        self.web_upgrade_btn = tk.Button(action_frame, text="Web Upgrade", state=tk.DISABLED, 
+                                         command=self.trigger_web_upgrade)
+        self.web_upgrade_btn.pack(side=tk.LEFT, padx=5)
 
         self.export_btn = tk.Button(action_frame, text="Export Output", command=self.export_output)
         self.export_btn.pack(side=tk.RIGHT, padx=5)
@@ -101,6 +105,20 @@ class BrennanSSHGUI:
         if self.shell:
             self.is_rebooting = True
             self.send_quick_command("sync && sleep 5s && kill 1")
+
+    def trigger_web_upgrade(self):
+        if not self.current_ip:
+            return
+            
+        def upgrade_task():
+            try:
+                self.root.after(0, self.print_to_terminal, "\n[Sending Web Upgrade command via HTTP...]\n")
+                urllib.request.urlopen(f"http://{self.current_ip}/b2.cgi?cmd=webUpgrade", timeout=5)
+                self.root.after(0, self.print_to_terminal, "[Web Upgrade triggered successfully. Check Brennan screen.]\n")
+            except Exception as e:
+                self.root.after(0, self.print_to_terminal, f"[Web Upgrade HTTP Error: {str(e)}]\n")
+                
+        threading.Thread(target=upgrade_task, daemon=True).start()
 
     def ssh_thread(self, ip, polling_mode=False):
         self.client = paramiko.SSHClient()
@@ -169,6 +187,7 @@ class BrennanSSHGUI:
         self.dac_btn.config(state=tk.NORMAL)
         self.dl_settings_btn.config(state=tk.NORMAL) 
         self.dl_b2db_btn.config(state=tk.NORMAL) 
+        self.web_upgrade_btn.config(state=tk.NORMAL)
 
     def disable_controls(self):
         self.connect_btn.config(state=tk.NORMAL)
@@ -179,6 +198,7 @@ class BrennanSSHGUI:
         self.dac_btn.config(state=tk.DISABLED)
         self.dl_settings_btn.config(state=tk.DISABLED) 
         self.dl_b2db_btn.config(state=tk.DISABLED) 
+        self.web_upgrade_btn.config(state=tk.DISABLED)
 
     def send_command(self):
         if self.shell:
@@ -210,6 +230,25 @@ class BrennanSSHGUI:
                 sftp.get(remote_path, local_path)
                 sftp.close()
                 
+                # --- START PASSWORD MASKING ---
+                if "b2settings" in remote_path:
+                    with open(local_path, 'r', encoding='utf-8', errors='ignore') as f:
+                        lines = f.readlines()
+
+                    for i in range(len(lines)):
+                        # Find "Wifi" and jump down 2 lines
+                        if lines[i].strip() == "Wifi" and i + 2 < len(lines):
+                            pw = lines[i+2].rstrip('\n\r')
+                            if len(pw) > 2:
+                                # Keep first and last character, replace the middle with *
+                                masked = pw[0] + '*' * (len(pw) - 2) + pw[-1]
+                                lines[i+2] = masked + '\n'
+                            break # Stop searching once we find it
+
+                    with open(local_path, 'w', encoding='utf-8') as f:
+                        f.writelines(lines)
+                # --- END PASSWORD MASKING ---
+                
                 success_msg = f"File saved to:\n{local_path}"
                 self.root.after(0, lambda msg=success_msg: messagebox.showinfo("Download Complete", msg))
                 self.root.after(0, self.print_to_terminal, f"\n[Successfully downloaded {remote_path} to your local drive]\n")
@@ -236,3 +275,4 @@ if __name__ == "__main__":
     root = tk.Tk()
     app = BrennanSSHGUI(root)
     root.mainloop()
+    
