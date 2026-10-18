@@ -9,7 +9,7 @@ import json
 import webbrowser
 import argparse
 
-APP_VERSION = "v0.6.1" # Set to older version number to test the popup
+APP_VERSION = "v0.6.2" # Set to older version number to test the popup
 
 class BrennanSSHGUI:
     def __init__(self, root):
@@ -46,10 +46,14 @@ class BrennanSSHGUI:
                                     command=self.trigger_reboot)
         self.reboot_btn.pack(side=tk.LEFT, padx=5)
 
-        self.update_btn = tk.Button(action_frame, text="Update (soon?)", state=tk.DISABLED, 
+        self.update_btn = tk.Button(action_frame, text="Sys Upd (soon?)", state=tk.DISABLED, 
                                     command=lambda: self.send_quick_command("Hoping to suss this out"))
         self.update_btn.pack(side=tk.LEFT, padx=5)
-        
+
+        self.radio_btn = tk.Button(action_frame, text="Radio Upd (soon?)", state=tk.DISABLED, 
+                                    command=lambda: self.send_quick_command("Hoping to suss this out"))
+        self.radio_btn.pack(side=tk.LEFT, padx=5) 
+               
         self.stats_btn = tk.Button(action_frame, text="Stats", state=tk.DISABLED, 
                                      command=self.trigger_stats)
         self.stats_btn.pack(side=tk.LEFT, padx=5)
@@ -58,7 +62,7 @@ class BrennanSSHGUI:
                                     command=lambda: self.send_quick_command("df -h && fdisk -l"))
         self.storage_btn.pack(side=tk.LEFT, padx=5)
         
-        self.dac_btn = tk.Button(action_frame, text="DAC Version", state=tk.DISABLED, 
+        self.dac_btn = tk.Button(action_frame, text="DAC Ver", state=tk.DISABLED, 
                                     command=lambda: self.send_quick_command("aplay -l"))
         self.dac_btn.pack(side=tk.LEFT, padx=5)
         
@@ -66,7 +70,7 @@ class BrennanSSHGUI:
                                     command=lambda: self.download_file("/media/hdd1/b2settings", "b2settings.txt"))
         self.dl_settings_btn.pack(side=tk.LEFT, padx=5)
 
-        self.dl_b2db_btn = tk.Button(action_frame, text="b2db", state=tk.DISABLED, 
+        self.dl_b2db_btn = tk.Button(action_frame, text="B2DB", state=tk.DISABLED, 
                                      command=lambda: self.download_file("/media/hdd1/b2db", "b2db.txt"))
         self.dl_b2db_btn.pack(side=tk.LEFT, padx=5)
 
@@ -251,7 +255,8 @@ class BrennanSSHGUI:
         self.cmd_entry.config(state=tk.NORMAL)
         self.cmd_entry.focus()
         self.reboot_btn.config(state=tk.NORMAL)
-        self.update_btn.config(state=tk.NORMAL)
+        self.update_btn.config(state=tk.DISABLED)
+        self.radio_btn.config(state=tk.DISABLED)
         self.stats_btn.config(state=tk.NORMAL)
         self.storage_btn.config(state=tk.NORMAL)
         self.dac_btn.config(state=tk.NORMAL)
@@ -264,6 +269,7 @@ class BrennanSSHGUI:
         self.cmd_entry.config(state=tk.DISABLED)
         self.reboot_btn.config(state=tk.DISABLED)
         self.update_btn.config(state=tk.DISABLED)
+        self.radio_btn.config(state=tk.DISABLED)
         self.stats_btn.config(state=tk.DISABLED)
         self.storage_btn.config(state=tk.DISABLED)
         self.dac_btn.config(state=tk.DISABLED)
