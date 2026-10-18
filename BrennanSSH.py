@@ -7,11 +7,14 @@ import time
 import urllib.request
 import json
 import webbrowser
+import argparse
+
+APP_VERSION = "v0.6.1" # Set to older version number to test the popup
 
 class BrennanSSHGUI:
     def __init__(self, root):
         self.root = root
-        self.root.title("Brennan SSH Auto-Login V 0.6.0")
+        self.root.title(f"Brennan SSH Support Ver: {APP_VERSION}")
         self.root.geometry("1200x900")
         
         self.client = None
@@ -48,7 +51,7 @@ class BrennanSSHGUI:
         self.update_btn.pack(side=tk.LEFT, padx=5)
         
         self.stats_btn = tk.Button(action_frame, text="Stats", state=tk.DISABLED, 
-									 command=self.trigger_stats)
+                                     command=self.trigger_stats)
         self.stats_btn.pack(side=tk.LEFT, padx=5)
 
         self.storage_btn = tk.Button(action_frame, text="Drive Stats", state=tk.DISABLED, 
@@ -85,6 +88,9 @@ class BrennanSSHGUI:
         self.cmd_entry.pack(side=tk.LEFT, padx=10, fill=tk.X, expand=True)
         self.cmd_entry.bind("<Return>", lambda e: self.send_command())
         self.cmd_entry.config(state=tk.DISABLED)
+
+        # THIS EXACT LINE TRIGGERS THE UPDATE CHECK WHEN THE APP OPENS
+        self.check_for_updates()
 
     def print_to_terminal(self, text):
         self.text_area.config(state=tk.NORMAL)
@@ -154,31 +160,34 @@ class BrennanSSHGUI:
                 
         threading.Thread(target=stats_task, daemon=True).start()
 
+    # Version check
     def check_for_updates(self):
-	    current_version = "v0.6.0"
-    
-	    api_url = "https://api.github.com/repos/SetTheTone/Brennan-Automated-Ssh-Terminal-And-Recording-Device/"
+        api_url = "https://api.github.com/repos/SetTheTone/Brennan-Automated-Ssh-Terminal-And-Recording-Device/releases/latest"
 
-	    def update_task():
-		    try:
-			    req = urllib.request.Request(api_url, headers={'User-Agent': 'BrennanSSH-App'})
-			    response = urllib.request.urlopen(req, timeout=5)
-			    data = json.loads(response.read().decode('utf-8'))
+        def update_task():
+            try:
+                self.root.after(0, self.print_to_terminal, "\n[Checking GitHub for updates...]\n")
+                
+                req = urllib.request.Request(api_url, headers={'User-Agent': 'BrennanSSH-App'})
+                response = urllib.request.urlopen(req, timeout=5)
+                data = json.loads(response.read().decode('utf-8'))
 
-			    latest_version = data.get("tag_name", "")
-			    release_page = data.get("html_url", "")
-				
-			    if latest_version and latest_version != current_version:
-				    def prompt_user():
-					    msg = f"A new version ({latest_version}) is available!\n\nYou are currently running {current_version}.\n\nWould you like to open the download page?"
-					    if messagebox.askyesno("Update Available", msg):
-						    webbrowser.open(release_page)
-                        
-				    self.root.after(1000, prompt_user)
-		    except Exception:
-			    pass
+                latest_version = data.get("tag_name", "")
+                release_page = data.get("html_url", "")
+                
+                self.root.after(0, self.print_to_terminal, f"[GitHub reports latest version is: {latest_version}]\n")
+                
+                if latest_version and latest_version != APP_VERSION:
+                    def prompt_user():
+                        msg = f"A new version ({latest_version}) is available!\n\nYou are currently running {APP_VERSION}.\n\nWould you like to open the download page?"
+                        if messagebox.askyesno("Update Available", msg):
+                            webbrowser.open(release_page)
+                            
+                    self.root.after(1000, prompt_user)
+            except Exception as e:
+                self.root.after(0, self.print_to_terminal, f"[Update Check Failed: {str(e)}]\n")
 
-	    threading.Thread(target=update_task, daemon=True).start()
+        threading.Thread(target=update_task, daemon=True).start()
 
     def ssh_thread(self, ip, polling_mode=False):
         self.client = paramiko.SSHClient()
