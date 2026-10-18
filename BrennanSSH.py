@@ -5,6 +5,7 @@ import threading
 import os
 import time
 import urllib.request
+import json
 
 class BrennanSSHGUI:
     def __init__(self, root):
@@ -40,11 +41,15 @@ class BrennanSSHGUI:
                                     command=self.trigger_reboot)
         self.reboot_btn.pack(side=tk.LEFT, padx=5)
 
-        self.update_btn = tk.Button(action_frame, text="Update", state=tk.DISABLED, 
-                                    command=lambda: self.send_quick_command("apt-get update"))
+        self.update_btn = tk.Button(action_frame, text="Update (soon?)", state=tk.DISABLED, 
+                                    command=lambda: self.send_quick_command("Hoping to suss this out"))
         self.update_btn.pack(side=tk.LEFT, padx=5)
         
-        self.storage_btn = tk.Button(action_frame, text="Check Storage", state=tk.DISABLED, 
+        self.stats_btn = tk.Button(action_frame, text="Stats", state=tk.DISABLED, 
+									 command=self.trigger_stats)
+        self.stats_btn.pack(side=tk.LEFT, padx=5)
+
+        self.storage_btn = tk.Button(action_frame, text="Drive Stats", state=tk.DISABLED, 
                                     command=lambda: self.send_quick_command("df -h && fdisk -l"))
         self.storage_btn.pack(side=tk.LEFT, padx=5)
         
@@ -59,10 +64,6 @@ class BrennanSSHGUI:
         self.dl_b2db_btn = tk.Button(action_frame, text="b2db", state=tk.DISABLED, 
                                      command=lambda: self.download_file("/media/hdd1/b2db", "b2db.txt"))
         self.dl_b2db_btn.pack(side=tk.LEFT, padx=5)
-        
-        self.web_upgrade_btn = tk.Button(action_frame, text="Web Upgrade", state=tk.DISABLED, 
-                                         command=self.trigger_web_upgrade)
-        self.web_upgrade_btn.pack(side=tk.LEFT, padx=5)
 
         self.export_btn = tk.Button(action_frame, text="Export Output", command=self.export_output)
         self.export_btn.pack(side=tk.RIGHT, padx=5)
@@ -119,6 +120,37 @@ class BrennanSSHGUI:
                 self.root.after(0, self.print_to_terminal, f"[Web Upgrade HTTP Error: {str(e)}]\n")
                 
         threading.Thread(target=upgrade_task, daemon=True).start()
+
+    def trigger_stats(self):
+        if not self.current_ip:
+            return
+            
+        def stats_task():
+            try:
+                self.root.after(0, self.print_to_terminal, "\n[Fetching Brennan Stats...]\n")
+                
+                url = f"http://{self.current_ip}/b2cgi.fcgi?getWebInfo"
+                response = urllib.request.urlopen(url, timeout=5)
+                raw_data = response.read().decode('utf-8')
+                
+                stats_json = json.loads(raw_data)
+                
+                formatted_stats = "\n" + "="*40 + "\n"
+                formatted_stats += "          BRENNAN SYSTEM STATS\n"
+                formatted_stats += "="*40 + "\n"
+                
+                for key, value in stats_json.items():
+                    clean_key = key[0].upper() + key[1:]
+                    formatted_stats += f"{clean_key:<20}: {value}\n"
+                    
+                formatted_stats += "="*40 + "\n\n"
+                
+                self.root.after(0, self.print_to_terminal, formatted_stats)
+                
+            except Exception as e:
+                self.root.after(0, self.print_to_terminal, f"[Stats Fetch Error: {str(e)}]\n")
+                
+        threading.Thread(target=stats_task, daemon=True).start()
 
     def ssh_thread(self, ip, polling_mode=False):
         self.client = paramiko.SSHClient()
@@ -183,22 +215,23 @@ class BrennanSSHGUI:
         self.cmd_entry.focus()
         self.reboot_btn.config(state=tk.NORMAL)
         self.update_btn.config(state=tk.NORMAL)
+        self.stats_btn.config(state=tk.NORMAL)
         self.storage_btn.config(state=tk.NORMAL)
         self.dac_btn.config(state=tk.NORMAL)
         self.dl_settings_btn.config(state=tk.NORMAL) 
         self.dl_b2db_btn.config(state=tk.NORMAL) 
-        self.web_upgrade_btn.config(state=tk.NORMAL)
+        self.stats_btn.config(state=tk.NORMAL)
 
     def disable_controls(self):
         self.connect_btn.config(state=tk.NORMAL)
         self.cmd_entry.config(state=tk.DISABLED)
         self.reboot_btn.config(state=tk.DISABLED)
         self.update_btn.config(state=tk.DISABLED)
+        self.stats_btn.config(state=tk.DISABLED)
         self.storage_btn.config(state=tk.DISABLED)
         self.dac_btn.config(state=tk.DISABLED)
         self.dl_settings_btn.config(state=tk.DISABLED) 
         self.dl_b2db_btn.config(state=tk.DISABLED) 
-        self.web_upgrade_btn.config(state=tk.DISABLED)
 
     def send_command(self):
         if self.shell:
@@ -236,14 +269,12 @@ class BrennanSSHGUI:
                         lines = f.readlines()
 
                     for i in range(len(lines)):
-                        # Find "Wifi" and jump down 2 lines
                         if lines[i].strip() == "Wifi" and i + 2 < len(lines):
                             pw = lines[i+2].rstrip('\n\r')
                             if len(pw) > 2:
-                                # Keep first and last character, replace the middle with *
                                 masked = pw[0] + '*' * (len(pw) - 2) + pw[-1]
                                 lines[i+2] = masked + '\n'
-                            break # Stop searching once we find it
+                            break 
 
                     with open(local_path, 'w', encoding='utf-8') as f:
                         f.writelines(lines)
@@ -275,4 +306,3 @@ if __name__ == "__main__":
     root = tk.Tk()
     app = BrennanSSHGUI(root)
     root.mainloop()
-    
