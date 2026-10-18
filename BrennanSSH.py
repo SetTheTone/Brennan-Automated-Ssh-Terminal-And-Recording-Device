@@ -6,11 +6,12 @@ import os
 import time
 import urllib.request
 import json
+import webbrowser
 
 class BrennanSSHGUI:
     def __init__(self, root):
         self.root = root
-        self.root.title("Brennan SSH Auto-Login V 0.5.1")
+        self.root.title("Brennan SSH Auto-Login V 0.6.0")
         self.root.geometry("1200x900")
         
         self.client = None
@@ -152,6 +153,32 @@ class BrennanSSHGUI:
                 self.root.after(0, self.print_to_terminal, f"[Stats Fetch Error: {str(e)}]\n")
                 
         threading.Thread(target=stats_task, daemon=True).start()
+
+    def check_for_updates(self):
+	    current_version = "v0.6.0"
+    
+	    api_url = "https://api.github.com/repos/SetTheTone/Brennan-Automated-Ssh-Terminal-And-Recording-Device/"
+
+	    def update_task():
+		    try:
+			    req = urllib.request.Request(api_url, headers={'User-Agent': 'BrennanSSH-App'})
+			    response = urllib.request.urlopen(req, timeout=5)
+			    data = json.loads(response.read().decode('utf-8'))
+
+			    latest_version = data.get("tag_name", "")
+			    release_page = data.get("html_url", "")
+				
+			    if latest_version and latest_version != current_version:
+				    def prompt_user():
+					    msg = f"A new version ({latest_version}) is available!\n\nYou are currently running {current_version}.\n\nWould you like to open the download page?"
+					    if messagebox.askyesno("Update Available", msg):
+						    webbrowser.open(release_page)
+                        
+				    self.root.after(1000, prompt_user)
+		    except Exception:
+			    pass
+
+	    threading.Thread(target=update_task, daemon=True).start()
 
     def ssh_thread(self, ip, polling_mode=False):
         self.client = paramiko.SSHClient()
