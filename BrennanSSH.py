@@ -12,7 +12,7 @@ import socket
 import concurrent.futures
 
 # --- MASTER APP SETTINGS --- 
-APP_VERSION = "v0.7.0" # Set new version before pushing to GitHub
+APP_VERSION = "v0.7.1" # Set new version before pushing to GitHub
 DEBUG_MODE = False     # True for Debug, False for Production 
 # ---------------------------
 
