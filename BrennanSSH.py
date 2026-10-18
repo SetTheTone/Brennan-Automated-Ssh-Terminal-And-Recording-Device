@@ -10,8 +10,8 @@ import json
 class BrennanSSHGUI:
     def __init__(self, root):
         self.root = root
-        self.root.title("Brennan SSH Auto-Login")
-        self.root.geometry("1250x900")
+        self.root.title("Brennan SSH Auto-Login V 0.5.1")
+        self.root.geometry("1200x900")
         
         self.client = None
         self.shell = None
@@ -27,6 +27,7 @@ class BrennanSSHGUI:
         tk.Label(top_frame, text="Brennan IP:").pack(side=tk.LEFT)
         self.ip_entry = tk.Entry(top_frame, width=20)
         self.ip_entry.pack(side=tk.LEFT, padx=10)
+        self.ip_entry.bind("<Return>", lambda e: self.start_connection())
         
         self.connect_btn = tk.Button(top_frame, text="Connect", command=self.start_connection)
         self.connect_btn.pack(side=tk.LEFT)
