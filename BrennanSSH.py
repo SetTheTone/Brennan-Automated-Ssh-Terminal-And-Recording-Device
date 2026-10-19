@@ -12,7 +12,7 @@ import socket
 import concurrent.futures
 
 # --- MASTER APP SETTINGS --- 
-APP_VERSION = "v0.7.2" # Set new version before pushing to GitHub
+APP_VERSION = "v0.7.4" # Set new version before pushing to GitHub
 DEBUG_MODE = False     # True for Debug, False for Production 
 # ---------------------------
 
@@ -212,7 +212,7 @@ class BrennanSSHGUI:
                     if res:
                         found_ip = res
                         break 
-            
+        
             if found_ip:
                 self.root.after(0, lambda: self.print_to_terminal(f"[Success! Brennan found at: {found_ip}]\n"))
                 def update_ui():
@@ -382,30 +382,54 @@ class BrennanSSHGUI:
                 sftp = self.client.open_sftp()
                 sftp.get(remote_path, local_path)
                 sftp.close()
+                
+                # --- READ THE DOWNLOADED FILE ---
+                with open(local_path, 'r', encoding='utf-8', errors='ignore') as f:
+                    lines = f.readlines()
+                    
+                # Password Masking for b2settings
                 if "b2settings" in remote_path:
-                    with open(local_path, 'r', encoding='utf-8', errors='ignore') as f:
-                        lines = f.readlines()
                     for i in range(len(lines)):
                         if lines[i].strip() == "Wifi" and i + 2 < len(lines):
                             pw = lines[i+2].rstrip('\n\r')
                             if len(pw) > 2:
                                 lines[i+2] = pw[0] + '*' * (len(pw) - 2) + pw[-1] + '\n'
                             break 
-                    with open(local_path, 'w', encoding='utf-8') as f:
-                        f.writelines(lines)
+                            
+                # --- APPLY THE DATE HEADERS & FOOTERS ---
+                dt_string = time.strftime('%Y-%m-%d %H:%M:%S')
+                header = f"========== DOWNLOADED: {dt_string} ==========\n\n"
+                footer = f"\n\n========== END OF FILE: {dt_string} ==========\n"
+                
+                lines.insert(0, header)
+                lines.append(footer)
+
+                with open(local_path, 'w', encoding='utf-8') as f:
+                    f.writelines(lines)
+                # ----------------------------------------
+                    
                 success_msg = f"File saved to:\n{local_path}"
                 self.root.after(0, lambda msg=success_msg: messagebox.showinfo("Download Complete", msg))
-                self.root.after(0, lambda: self.print_to_terminal(f"\n[Successfully downloaded {remote_path}]\n"))
+                self.root.after(0, lambda: self.print_to_terminal(f"\n[Success! Downloaded {remote_path}]\n"))
             except Exception as e:
                 self.root.after(0, lambda err=str(e): messagebox.showerror("Download Error", f"Failed:\n{err}"))
+                self.root.after(0, lambda err=str(e): self.print_to_terminal(f"\n[Error downloading {remote_path}: {err}]\n"))
         threading.Thread(target=sftp_task, daemon=True).start()
 
     def export_output(self):
         try:
             output_text = self.text_area.get("1.0", tk.END)
             save_path = os.path.join(os.getcwd(), "BrennanOutput.txt") 
+            
+            # --- APPLY THE DATE HEADERS & FOOTERS TO EXPORT ---
+            dt_string = time.strftime('%Y-%m-%d %H:%M:%S')
+            header = f"========== EXPORTED: {dt_string} ==========\n\n"
+            footer = f"\n\n========== END EXPORT: {dt_string} ==========\n"
+            
             with open(save_path, "w", encoding="utf-8") as f:
-                f.write(output_text)
+                f.write(header + output_text + footer)
+            # --------------------------------------------------
+                
             messagebox.showinfo("Export Successful", f"Output saved to:\n{save_path}")
             
             # --- AUTO-COLORED SUCCESS ECHO ---
@@ -421,4 +445,4 @@ if __name__ == "__main__":
     root = tk.Tk()
     app = BrennanSSHGUI(root)
     root.mainloop()
-# hoop
+# CLAW
