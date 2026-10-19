@@ -12,7 +12,7 @@ import socket
 import concurrent.futures
 
 # --- MASTER APP SETTINGS --- 
-APP_VERSION = "v0.7.1" # Set new version before pushing to GitHub
+APP_VERSION = "v0.7.2" # Set new version before pushing to GitHub
 DEBUG_MODE = False     # True for Debug, False for Production 
 # ---------------------------
 
@@ -68,6 +68,11 @@ class BrennanSSHGUI:
         self.storage_btn = tk.Button(action_frame, text="Drive Stats", state=tk.DISABLED, 
                                     command=lambda: self.send_quick_command("df -h && fdisk -l"))
         self.storage_btn.pack(side=tk.LEFT, padx=5)
+        
+        self.wifi_btn = tk.Button(action_frame, text="Wi-Fi", state=tk.DISABLED, 
+                                    command=lambda: self.send_quick_command("awk '/wlan/ {print \"Wi-Fi Signal: \" $4 \" dBm\"}' /proc/net/wireless"))
+                                    # awk '/wlan/ {print "Wi-Fi Signal: " $4 " dBm"}' /proc/net/wireless
+        self.wifi_btn.pack(side=tk.LEFT, padx=5)
         
         self.dac_btn = tk.Button(action_frame, text="DAC Ver", state=tk.DISABLED, 
                                     command=lambda: self.send_quick_command("aplay -l"))
@@ -332,6 +337,7 @@ class BrennanSSHGUI:
         self.radio_btn.config(state=tk.DISABLED) # Leave DISABLED awaiting code
         self.stats_btn.config(state=tk.NORMAL)
         self.storage_btn.config(state=tk.NORMAL)
+        self.wifi_btn.config(state=tk.NORMAL)
         self.dac_btn.config(state=tk.NORMAL)
         self.dl_settings_btn.config(state=tk.NORMAL) 
         self.dl_b2db_btn.config(state=tk.NORMAL) 
@@ -345,6 +351,7 @@ class BrennanSSHGUI:
         self.radio_btn.config(state=tk.DISABLED)
         self.stats_btn.config(state=tk.DISABLED)
         self.storage_btn.config(state=tk.DISABLED)
+        self.wifi_btn.config(state=tk.DISABLED)
         self.dac_btn.config(state=tk.DISABLED)
         self.dl_settings_btn.config(state=tk.DISABLED) 
         self.dl_b2db_btn.config(state=tk.DISABLED) 
