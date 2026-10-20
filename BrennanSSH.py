@@ -69,9 +69,10 @@ class BrennanSSHGUI:
                                     command=lambda: self.send_quick_command("df -h && fdisk -l"))
         self.storage_btn.pack(side=tk.LEFT, padx=5)
         
-        self.wifi_btn = tk.Button(action_frame, text="Wi-Fi", state=tk.DISABLED, 
-                                    command=lambda: self.send_quick_command("awk '/wlan/ {print \"Wi-Fi Signal: \" $4 \" dBm\"}' /proc/net/wireless"))
-                                    # awk '/wlan/ {print "Wi-Fi Signal: " $4 " dBm"}' /proc/net/wireless
+        self.wifi_btn = tk.Button(action_frame, text="Wi-Fi (dB)", state=tk.DISABLED, 
+                                    command=lambda: self.send_quick_command("iwconfig | grep 'Signal level'"))
+        self.wifi_btn.pack(side=tk.LEFT, padx=5)
+
         self.wifi_btn.pack(side=tk.LEFT, padx=5)
         
         self.dac_btn = tk.Button(action_frame, text="DAC Ver", state=tk.DISABLED, 
@@ -445,4 +446,4 @@ if __name__ == "__main__":
     root = tk.Tk()
     app = BrennanSSHGUI(root)
     root.mainloop()
-# CLAW
+# TREE
