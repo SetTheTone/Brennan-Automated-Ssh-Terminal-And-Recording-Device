@@ -12,7 +12,7 @@ import socket
 import concurrent.futures
 
 # --- MASTER APP SETTINGS --- 
-APP_VERSION = "v0.7.4" # Set new version before pushing to GitHub
+APP_VERSION = "v0.7.5" # Set new version before pushing to GitHub
 DEBUG_MODE = False     # True for Debug, False for Production 
 # ---------------------------
 
@@ -53,14 +53,18 @@ class BrennanSSHGUI:
                                     command=self.trigger_reboot)
         self.reboot_btn.pack(side=tk.LEFT, padx=5)
 
-        self.update_btn = tk.Button(action_frame, text="Sys Upd (soon?)", state=tk.DISABLED, 
+        self.update_btn = tk.Button(action_frame, text="Sys Upd", state=tk.DISABLED, 
                                     command=lambda: self.send_quick_command("Hoping to suss this out"))
         self.update_btn.pack(side=tk.LEFT, padx=5)
 
-        self.radio_btn = tk.Button(action_frame, text="Radio Upd (soon?)", state=tk.DISABLED, 
+        self.radio_btn = tk.Button(action_frame, text="Radio Upd", state=tk.DISABLED, 
                                     command=lambda: self.send_quick_command("Hoping to suss this out"))
         self.radio_btn.pack(side=tk.LEFT, padx=5) 
-               
+        
+        self.scandisk_btn = tk.Button(action_frame, text="ScanDisk", state=tk.DISABLED, 
+                              command=self.trigger_scandisk)
+        self.scandisk_btn.pack(side=tk.LEFT, padx=5)
+                
         self.stats_btn = tk.Button(action_frame, text="Stats", state=tk.DISABLED, 
                                      command=self.trigger_stats)
         self.stats_btn.pack(side=tk.LEFT, padx=5)
@@ -71,8 +75,6 @@ class BrennanSSHGUI:
         
         self.wifi_btn = tk.Button(action_frame, text="Wi-Fi (dB)", state=tk.DISABLED, 
                                     command=lambda: self.send_quick_command("iwconfig | grep 'Signal level'"))
-        self.wifi_btn.pack(side=tk.LEFT, padx=5)
-
         self.wifi_btn.pack(side=tk.LEFT, padx=5)
         
         self.dac_btn = tk.Button(action_frame, text="DAC Ver", state=tk.DISABLED, 
@@ -257,6 +259,54 @@ class BrennanSSHGUI:
                 self.root.after(0, lambda err=str(e): self.print_to_terminal(f"[Stats Fetch Error: {err}]\n"))
         threading.Thread(target=stats_task, daemon=True).start()
 
+    # --- THIS WAS THE MISSING FUNCTION! ---
+    def trigger_scandisk(self):
+        if not self.current_ip: return
+        self.print_to_terminal("\n[Starting Scan Disk...]\n")
+        
+        # 1. Trigger the scan silently via the SSH shell
+        self.shell.send(f"wget -qO- http://{self.current_ip}/b2cgi.fcgi?scanDisk\n")
+        
+        # 2. Run a background monitor to fetch the progress
+        def monitor_scan():
+            time.sleep(1) # Give the Brennan a moment to start the process
+            attempts = 0
+            last_bg = ""
+            
+            while attempts < 300: # Timeout after ~10 mins
+                try:
+                    url = f"http://{self.current_ip}/b2cgi.fcgi?status"
+                    response = urllib.request.urlopen(url, timeout=5)
+                    data = json.loads(response.read().decode('utf-8'))
+                    
+                    # The Brennan reports active tasks in the "background" field
+                    bg_status = data.get("background", "").strip()
+                    
+                    if not bg_status or bg_status.lower() == "idle":
+                        self.root.after(0, lambda: self.print_to_terminal("[Scan Disk Complete!]\n"))
+                        break
+                        
+                    # Only print if the number actually changed to prevent terminal spam
+                    if bg_status != last_bg:
+                        # Format it cleanly
+                        if bg_status.lower().startswith("scan"):
+                            msg = f"  -> {bg_status} files..."
+                        else:
+                            msg = f"  -> {bg_status}"
+                            
+                        self.root.after(0, lambda m=msg: self.print_to_terminal(f"{m}\n"))
+                        last_bg = bg_status
+                        
+                    time.sleep(2)
+                    attempts += 1
+                    
+                except Exception as e:
+                    self.debug_print(f"Scan monitor stopped: {e}")
+                    break
+
+        threading.Thread(target=monitor_scan, daemon=True).start()
+    # --------------------------------------
+
     def check_for_updates(self):
         api_url = "https://api.github.com/repos/SetTheTone/Brennan-Automated-Ssh-Terminal-And-Recording-Device/releases/latest"
         def update_task():
@@ -336,6 +386,7 @@ class BrennanSSHGUI:
         self.reboot_btn.config(state=tk.NORMAL)
         self.update_btn.config(state=tk.DISABLED) # Leave DISABLED awaiting code
         self.radio_btn.config(state=tk.DISABLED) # Leave DISABLED awaiting code
+        self.scandisk_btn.config(state=tk.NORMAL)
         self.stats_btn.config(state=tk.NORMAL)
         self.storage_btn.config(state=tk.NORMAL)
         self.wifi_btn.config(state=tk.NORMAL)
@@ -350,6 +401,7 @@ class BrennanSSHGUI:
         self.reboot_btn.config(state=tk.DISABLED)
         self.update_btn.config(state=tk.DISABLED)
         self.radio_btn.config(state=tk.DISABLED)
+        self.scandisk_btn.config(state=tk.DISABLED)
         self.stats_btn.config(state=tk.DISABLED)
         self.storage_btn.config(state=tk.DISABLED)
         self.wifi_btn.config(state=tk.DISABLED)
@@ -446,4 +498,5 @@ if __name__ == "__main__":
     root = tk.Tk()
     app = BrennanSSHGUI(root)
     root.mainloop()
-# TREE
+
+#DUNE
