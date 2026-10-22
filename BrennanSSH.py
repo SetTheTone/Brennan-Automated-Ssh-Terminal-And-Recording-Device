@@ -12,7 +12,7 @@ import socket
 import concurrent.futures
 
 # --- MASTER APP SETTINGS --- 
-APP_VERSION = "v0.7.6" # Set new version before pushing to GitHub
+APP_VERSION = "v0.7.7" # Set new version before pushing to GitHub
 DEBUG_MODE = False     # True for Debug, False for Production 
 # ---------------------------
 
@@ -53,14 +53,6 @@ class BrennanSSHGUI:
                                     command=self.trigger_reboot)
         self.reboot_btn.pack(side=tk.LEFT, padx=5)
 
-        self.update_btn = tk.Button(action_frame, text="SysUpd", state=tk.DISABLED, 
-                                    command=lambda: self.send_quick_command("Hoping to suss this out"))
-        self.update_btn.pack(side=tk.LEFT, padx=5)
-
-        self.radio_btn = tk.Button(action_frame, text="RadUpd", state=tk.DISABLED, 
-                                    command=lambda: self.send_quick_command("Hoping to suss this out"))
-        self.radio_btn.pack(side=tk.LEFT, padx=5) 
-        
         self.scandisk_btn = tk.Button(action_frame, text="ScanDisk", state=tk.DISABLED,
                               command=self.trigger_scandisk)
         self.scandisk_btn.pack(side=tk.LEFT, padx=5)
@@ -84,6 +76,10 @@ class BrennanSSHGUI:
         self.dac_btn = tk.Button(action_frame, text="DAC Ver", state=tk.DISABLED, 
                                     command=lambda: self.send_quick_command("aplay -l"))
         self.dac_btn.pack(side=tk.LEFT, padx=5)
+        
+        self.dl_debug_btn = tk.Button(action_frame, text="Debug Log", state=tk.DISABLED, 
+                                    command=lambda: self.download_file("/tmp/messages", "BrennanDebug.txt"))
+        self.dl_debug_btn.pack(side=tk.LEFT, padx=5)
         
         self.dl_settings_btn = tk.Button(action_frame, text="Settings", state=tk.DISABLED, 
                                     command=lambda: self.download_file("/media/hdd1/b2settings", "b2settings.txt"))
@@ -337,7 +333,41 @@ class BrennanSSHGUI:
             except Exception as e:
                 self.root.after(0, lambda err=str(e): self.print_to_terminal(f"[Sonos Check Error: {err}]\n"))
                 
-        threading.Thread(target=sonos_task, daemon=True).start()    
+        threading.Thread(target=sonos_task, daemon=True).start()
+        
+    def download_debug_log(self):
+        if not self.current_ip: return
+    
+        local_path = filedialog.asksaveasfilename(
+            initialfile="BrennanDebug.txt",
+            title="Save Debug Log",
+            filetypes=(("Text Files", "*.txt"), ("All Files", "*.*"))
+        )
+        if not local_path: return 
+    
+        def fetch_debug_task():
+            try:
+                self.root.after(0, lambda: self.print_to_terminal("\n[Fetching Debug Log...]\n"))
+            
+                # Placeholder URL: We need to verify the exact command
+                url = f"http://{self.current_ip}/b2cgi.fcgi?getDebug" 
+            
+                req = urllib.request.Request(url, headers={'User-Agent': 'BrennanSSH-App'})
+                response = urllib.request.urlopen(req, timeout=5)
+                log_data = response.read().decode('utf-8', errors='ignore')
+            
+                with open(local_path, "w", encoding="utf-8") as f:
+                    f.write(log_data)
+                
+                success_msg = f"Debug log saved to:\n{local_path}"
+                self.root.after(0, lambda msg=success_msg: messagebox.showinfo("Download Complete", msg))
+                self.root.after(0, lambda: self.print_to_terminal(f"\n[Success! Downloaded Debug Log to {local_path}]\n"))
+            
+            except Exception as e:
+                self.root.after(0, lambda err=str(e): messagebox.showerror("Download Error", f"Failed:\n{err}"))
+                self.root.after(0, lambda err=str(e): self.print_to_terminal(f"\n[Error downloading Debug Log: {err}]\n"))
+            
+        threading.Thread(target=fetch_debug_task, daemon=True).start()    
 
     def check_for_updates(self):
         api_url = "https://api.github.com/repos/SetTheTone/Brennan-Automated-Ssh-Terminal-And-Recording-Device/releases/latest"
@@ -416,14 +446,13 @@ class BrennanSSHGUI:
         self.cmd_entry.config(state=tk.NORMAL)
         self.cmd_entry.focus()
         self.reboot_btn.config(state=tk.NORMAL)
-        self.update_btn.config(state=tk.DISABLED) # Leave DISABLED awaiting code
-        self.radio_btn.config(state=tk.DISABLED) # Leave DISABLED awaiting code
         self.scandisk_btn.config(state=tk.NORMAL)
         self.sonos_btn.config(state=tk.NORMAL)
         self.stats_btn.config(state=tk.NORMAL)
         self.storage_btn.config(state=tk.NORMAL)
         self.wifi_btn.config(state=tk.NORMAL)
         self.dac_btn.config(state=tk.NORMAL)
+        self.dl_debug_btn.config(state=tk.NORMAL)
         self.dl_settings_btn.config(state=tk.NORMAL) 
         self.dl_b2db_btn.config(state=tk.NORMAL) 
         self.scan_btn.config(state=tk.DISABLED)
@@ -432,14 +461,13 @@ class BrennanSSHGUI:
         self.connect_btn.config(state=tk.NORMAL)
         self.cmd_entry.config(state=tk.DISABLED)
         self.reboot_btn.config(state=tk.DISABLED)
-        self.update_btn.config(state=tk.DISABLED)
-        self.radio_btn.config(state=tk.DISABLED)
         self.scandisk_btn.config(state=tk.DISABLED)
         self.sonos_btn.config(state=tk.DISABLED)
         self.stats_btn.config(state=tk.DISABLED)
         self.storage_btn.config(state=tk.DISABLED)
         self.wifi_btn.config(state=tk.DISABLED)
         self.dac_btn.config(state=tk.DISABLED)
+        self.dl_debug_btn.config(state=tk.DISABLED)
         self.dl_settings_btn.config(state=tk.DISABLED) 
         self.dl_b2db_btn.config(state=tk.DISABLED) 
         self.scan_btn.config(state=tk.NORMAL)
