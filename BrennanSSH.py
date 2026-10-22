@@ -12,7 +12,7 @@ import socket
 import concurrent.futures
 
 # --- MASTER APP SETTINGS --- 
-APP_VERSION = "v0.7.5" # Set new version before pushing to GitHub
+APP_VERSION = "v0.7.6" # Set new version before pushing to GitHub
 DEBUG_MODE = False     # True for Debug, False for Production 
 # ---------------------------
 
@@ -53,17 +53,21 @@ class BrennanSSHGUI:
                                     command=self.trigger_reboot)
         self.reboot_btn.pack(side=tk.LEFT, padx=5)
 
-        self.update_btn = tk.Button(action_frame, text="Sys Upd", state=tk.DISABLED, 
+        self.update_btn = tk.Button(action_frame, text="SysUpd", state=tk.DISABLED, 
                                     command=lambda: self.send_quick_command("Hoping to suss this out"))
         self.update_btn.pack(side=tk.LEFT, padx=5)
 
-        self.radio_btn = tk.Button(action_frame, text="Radio Upd", state=tk.DISABLED, 
+        self.radio_btn = tk.Button(action_frame, text="RadUpd", state=tk.DISABLED, 
                                     command=lambda: self.send_quick_command("Hoping to suss this out"))
         self.radio_btn.pack(side=tk.LEFT, padx=5) 
         
-        self.scandisk_btn = tk.Button(action_frame, text="ScanDisk", state=tk.DISABLED, 
+        self.scandisk_btn = tk.Button(action_frame, text="ScanDisk", state=tk.DISABLED,
                               command=self.trigger_scandisk)
         self.scandisk_btn.pack(side=tk.LEFT, padx=5)
+        
+        self.sonos_btn = tk.Button(action_frame, text="Sonos", state=tk.DISABLED, 
+                                     command=self.trigger_sonos_scan)
+        self.sonos_btn.pack(side=tk.LEFT, padx=5)        
                 
         self.stats_btn = tk.Button(action_frame, text="Stats", state=tk.DISABLED, 
                                      command=self.trigger_stats)
@@ -259,7 +263,6 @@ class BrennanSSHGUI:
                 self.root.after(0, lambda err=str(e): self.print_to_terminal(f"[Stats Fetch Error: {err}]\n"))
         threading.Thread(target=stats_task, daemon=True).start()
 
-    # --- THIS WAS THE MISSING FUNCTION! ---
     def trigger_scandisk(self):
         if not self.current_ip: return
         self.print_to_terminal("\n[Starting Scan Disk...]\n")
@@ -305,7 +308,36 @@ class BrennanSSHGUI:
                     break
 
         threading.Thread(target=monitor_scan, daemon=True).start()
-    # --------------------------------------
+        
+    def trigger_sonos_scan(self):
+        if not self.current_ip: return
+        def sonos_task():
+            try:
+                self.root.after(0, lambda: self.print_to_terminal("\n[Checking Brennan for Sonos Zones...]\n"))
+                
+                # Fetch the same status API the web interface uses
+                url = f"http://{self.current_ip}/b2cgi.fcgi?status"
+                response = urllib.request.urlopen(url, timeout=5)
+                data = json.loads(response.read().decode('utf-8'))
+                
+                # Extract the Sonos array and the current active zone
+                sonos_zones = data.get("sonos", [])
+                current_zone = data.get("zone", "None / Wired Speaker")
+                
+                if not sonos_zones:
+                    self.root.after(0, lambda: self.print_to_terminal("  -> No Sonos speakers detected by the Brennan.\n"))
+                else:
+                    formatted = f"  -> Found {len(sonos_zones)} Sonos zone(s):\n"
+                    for zone in sonos_zones:
+                        formatted += f"       - {zone}\n"
+                    formatted += f"  -> Current Active Zone: {current_zone}\n"
+                    
+                    self.root.after(0, lambda f=formatted: self.print_to_terminal(f))
+                    
+            except Exception as e:
+                self.root.after(0, lambda err=str(e): self.print_to_terminal(f"[Sonos Check Error: {err}]\n"))
+                
+        threading.Thread(target=sonos_task, daemon=True).start()    
 
     def check_for_updates(self):
         api_url = "https://api.github.com/repos/SetTheTone/Brennan-Automated-Ssh-Terminal-And-Recording-Device/releases/latest"
@@ -387,6 +419,7 @@ class BrennanSSHGUI:
         self.update_btn.config(state=tk.DISABLED) # Leave DISABLED awaiting code
         self.radio_btn.config(state=tk.DISABLED) # Leave DISABLED awaiting code
         self.scandisk_btn.config(state=tk.NORMAL)
+        self.sonos_btn.config(state=tk.NORMAL)
         self.stats_btn.config(state=tk.NORMAL)
         self.storage_btn.config(state=tk.NORMAL)
         self.wifi_btn.config(state=tk.NORMAL)
@@ -402,6 +435,7 @@ class BrennanSSHGUI:
         self.update_btn.config(state=tk.DISABLED)
         self.radio_btn.config(state=tk.DISABLED)
         self.scandisk_btn.config(state=tk.DISABLED)
+        self.sonos_btn.config(state=tk.DISABLED)
         self.stats_btn.config(state=tk.DISABLED)
         self.storage_btn.config(state=tk.DISABLED)
         self.wifi_btn.config(state=tk.DISABLED)
